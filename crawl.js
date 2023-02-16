@@ -1,25 +1,49 @@
 const { JSDOM } = require("jsdom");
 
-async function crawlPage(currentURL) {
+async function crawlPage(baseURL, currentURL, pages) {
+  const baseURLObj = new URL(baseURL);
+  const currentURLObj = new URL(currentURL);
+  if (currentURLObj.hostname !== baseURLObj.hostname) {
+    return pages;
+  }
+
+  const normalizedCurrentURL = normalizeURL(currentURL);
+  if (pages[normalizedCurrentURL] > 0) {
+    // 이미 본적이 있으면 카운터 증가
+    pages[normalizedCurrentURL]++;
+    return pages;
+  }
+
+  pages[normalizedCurrentURL] = 1;
+
   console.log(`actively crawling: ${currentURL}`);
+  let htmlBody = "";
   try {
     const resp = await fetch(currentURL);
     if (resp.status > 399) {
       console.log(
         `error in fetch with status code :${resp.status} on page: ${currentURL}`
       );
-      return;
+      return pages;
     }
 
     const contentType = resp.headers.get("content-type");
-    if (contentType.includes("text/html")) {
+    if (!contentType.includes("text/html")) {
       console.log(`error non html/type`);
-      return;
+      return pages;
     }
-    console.log(await resp.text()); //json이 html로
+
+    htmlBody = await resp.text(); //json이 html로
   } catch (err) {
     console.log(`error in fetch: ${err.message}`);
   }
+  const nextUrls = getURLFromHTML(htmlBody, baseURL);
+
+  for (const nextURL of nextUrls) {
+    pages = await crawlPage(baseURL, nextURL, pages);
+  }
+
+  return pages;
 }
 
 function getURLFromHTML(htmlBody, baseURL) {
