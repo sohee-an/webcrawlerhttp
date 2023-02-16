@@ -1,6 +1,7 @@
 const { crawlPage } = require("./crawl");
+const { printReport } = require("./report");
 
-function main() {
+async function main() {
   console.log(process.argv);
   if (process.argv.length < 3) {
     console.log("no website provied");
@@ -11,6 +12,7 @@ function main() {
   }
   const baseURL = process.argv[2];
   console.log(`crawl 스타트~ ${baseURL}`);
-  crawlPage(baseURL);
+  const pages = await crawlPage(baseURL, baseURL, {});
+  printReport(pages);
 }
 main();
